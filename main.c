@@ -225,7 +225,9 @@ int main(void)
 #endif
 	
 	RTC_enable_square_wave();
-	lcd_puts(0, 0, "start");
+	display_current_date_time();
+	lcd_clear();
+	lcd_puts(0, 0, option[option_index]);
 	
 	while (1) 
     {
