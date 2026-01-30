@@ -13,7 +13,7 @@
 #include <string.h>
 #include <avr/interrupt.h>
 
-
+// button pins are pulled-low by 10K and reads for 5V on press
 #define BUTTON_Reg       DDRC
 #define BUTTON_OK        (PINC & 0x02)
 #define BUTTON_UP        (PINC & 0x01)
@@ -37,7 +37,7 @@ char *option[MAX_OPTION] = {
 	"Alarm",
 	"Stopwatch",
 	"Timer",
-	"Time"
+	"Date Time"
 };
 
 void PCINT_PD0_init(void)
@@ -120,6 +120,8 @@ void process_stopwatch(void)
 	uint8_t counter[3] = {0,0,0};
 	char buffer[16];
 
+	lcd_draw_char(0, 13, ICON_INDEX_PAUSE);
+
 	while (1)
 	{
 		if (BUTTON_BACK)
@@ -138,6 +140,11 @@ void process_stopwatch(void)
 				counter[0] = 0;
 				counter[1] = 0;
 				counter[2] = 0;
+				lcd_draw_char(0, 13, ICON_INDEX_PLAY);
+			}
+			else if (start == 0)
+			{
+				lcd_draw_char(0, 13, ICON_INDEX_PAUSE);
 			}
 		}
 		if (start == 1)
@@ -165,15 +172,18 @@ void process_stopwatch(void)
 void process_timer(void)
 {
 	char buffer[16];
-	uint8_t counter[3] = {0,0,0};
+	int8_t counter[3] = {0,0,0};
 	uint8_t index = 2;
 	uint8_t run = 1;
+	uint8_t start = 0;
 
 	memset(buffer, 0, 16);
 	sprintf(buffer, "%02d:%02d:%02d", counter[0], counter[1], counter[2]);
 	lcd_puts(0, 4, buffer);
-
+	lcd_draw_char(0, 13, ICON_INDEX_OK);
 	lcd_cursor_on();
+	lcd_cursor(0, 4+(index*3));
+
 	while (run)
 	{
 		if (BUTTON_BACK)
@@ -184,20 +194,72 @@ void process_timer(void)
 		if (BUTTON_OK)
 		{
 			_delay_ms(200);
+			if (index == 3)
+			{
+				start = 1;
+				index = 0;
+				lcd_draw_char(0, 13, ICON_INDEX_PLAY);
+				lcd_cursor_off();
+				continue;
+			}
 			counter[index]++;
+			if (counter[index] == 60)
+			{
+				counter[index] = 0;
+			}
 			memset(buffer, 0, 16);
 			sprintf(buffer, "%02d:%02d:%02d", counter[0], counter[1], counter[2]);
 			lcd_puts(0, 4, buffer);
+			lcd_cursor(0, 4+(index*3));
 		}
 		if (BUTTON_UP)
 		{
 			_delay_ms(200);
 			index++;
-			if (index > 2)
+			if (index > 3)
 			{
 				index = 0;
 			}
 			lcd_cursor(0, 4+(index*3));
+		}
+		while (start == 1)
+		{
+			memset(buffer, 0, 16);
+			sprintf(buffer, "%02d:%02d:%02d", counter[0], counter[1], counter[2]);
+			lcd_puts(0, 4, buffer);
+			_delay_ms(1000-36); // compensate for LCD driver delays
+
+			counter[2]--;
+
+			if (counter[0] < 0) counter[0] = 0;
+			if (counter[1] < 0) counter[1] = 0;
+			if (counter[2] < 0) counter[2] = 0;
+
+			if (counter[2] == 0)
+			{
+				if (counter[1] != 0)
+				{
+					counter[1]--;
+					counter[2] = 59;
+				}
+			}
+			if ((counter[1] == 0) && (counter[2] == 0))
+			{
+				if (counter[0] != 0)
+				{
+					counter[0]--;
+					counter[1] = 59;
+					counter[2] = 59;
+				}
+			}
+			if ((BUTTON_BACK) || ((counter[0] == 0) && (counter[1] == 0) && (counter[2] == 0)))
+			{
+				_delay_ms(200);
+				start = 0;
+				lcd_draw_char(0, 13, ICON_INDEX_OK);
+				lcd_cursor(0, 4+(index*3));
+				lcd_cursor_on();
+			}
 		}
 	}
 	lcd_cursor_off();
@@ -223,11 +285,12 @@ int main(void)
 	PORTB = 0x01;
 	while (1){}
 #endif
-	
+
 	RTC_enable_square_wave();
 	display_current_date_time();
 	lcd_clear();
-	lcd_puts(0, 0, option[option_index]);
+	lcd_draw_char(0, 0, option_index);
+	lcd_puts(0, 3, option[option_index]);
 	
 	while (1) 
     {
@@ -254,7 +317,8 @@ int main(void)
 				break;
 			}
 			lcd_clear();
-			lcd_puts(0, 0, option[option_index]);
+			lcd_draw_char(0, 0, option_index);
+			lcd_puts(0, 3, option[option_index]);
 		}
 		
 		if (BUTTON_UP)
@@ -266,7 +330,8 @@ int main(void)
 				option_index = 0;
 			}
 			lcd_clear();
-			lcd_puts(0, 0, option[option_index]);
+			lcd_draw_char(0, 0, option_index);
+			lcd_puts(0, 3, option[option_index]);
 		}
     }
 }

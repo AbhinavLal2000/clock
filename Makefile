@@ -21,9 +21,9 @@ flash:
 	avrdude -c usbasp -p atmega328p -U flash:w:out/image.hex
 
 clean:
-	rm out/image.elf
-	rm out/image.hex
-	rm obj/main.o
-	rm obj/lcd.o
-	rm obj/i2c.o
-	rm obj/rtc.o
+	del .\out\image.elf
+	del .\out\image.hex
+	del .\obj\main.o
+	del .\obj\lcd.o
+	del .\obj\i2c.o
+	del .\obj\rtc.o
