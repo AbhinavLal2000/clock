@@ -176,6 +176,7 @@ void process_timer(void)
 	uint8_t index = 2;
 	uint8_t run = 1;
 	uint8_t start = 0;
+	uint64_t last_system_seconds = system_seconds;
 
 	memset(buffer, 0, 16);
 	sprintf(buffer, "%02d:%02d:%02d", counter[0], counter[1], counter[2]);
@@ -198,6 +199,7 @@ void process_timer(void)
 			{
 				start = 1;
 				index = 0;
+				system_seconds = 0;
 				lcd_draw_char(0, 13, ICON_INDEX_PLAY);
 				lcd_cursor_off();
 				continue;
@@ -227,9 +229,12 @@ void process_timer(void)
 			memset(buffer, 0, 16);
 			sprintf(buffer, "%02d:%02d:%02d", counter[0], counter[1], counter[2]);
 			lcd_puts(0, 4, buffer);
-			_delay_ms(1000-36); // compensate for LCD driver delays
 
-			counter[2]--;
+			if (system_seconds != last_system_seconds)
+			{
+				last_system_seconds = system_seconds;
+				counter[2]--;
+			}
 
 			if (counter[0] < 0) counter[0] = 0;
 			if (counter[1] < 0) counter[1] = 0;
